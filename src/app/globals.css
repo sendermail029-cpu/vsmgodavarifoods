@@ -1,0 +1,176 @@
+@import "@fontsource-variable/fraunces";
+@import "@fontsource-variable/dm-sans";
+@import "@fontsource/tiro-telugu/telugu-400.css";
+@import "tailwindcss";
+
+@theme {
+  --font-display: "Fraunces Variable", Georgia, serif;
+  --font-sans: "DM Sans Variable", system-ui, sans-serif;
+  --font-telugu: "Tiro Telugu", "Noto Sans Telugu", serif;
+
+  --color-maroon-50: #fbf2f0;
+  --color-maroon-100: #f5dcd7;
+  --color-maroon-200: #e9b3a9;
+  --color-maroon-500: #a83226;
+  --color-maroon-600: #8f2620;
+  --color-maroon-700: #7a1c1c;
+  --color-maroon-800: #5e1515;
+  --color-maroon-900: #3d0d0d;
+  --color-chilli: #c0321f;
+  --color-turmeric: #d4a843;
+  --color-turmeric-light: #ecd393;
+  --color-gold: #b88a2e;
+  --color-gold-light: #e9cf8a;
+  --color-gold-pale: #f6ecd4;
+  --color-leaf: #2f6b3a;
+  --color-cream: #fdf8ee;
+  --color-cream-dark: #f2e4c4;
+  --color-ink: #2a1210;
+}
+
+@layer base {
+  html { scroll-behavior: smooth; -webkit-tap-highlight-color: transparent; overflow-x: clip; }
+  /* never allow a sideways scrollbar (slide-in animations, full-width map, smoky headline start off-screen) */
+  body { overflow-x: clip; }
+  body { @apply bg-cream text-ink font-sans antialiased; }
+  ::selection { background: var(--color-turmeric); color: var(--color-ink); }
+  :focus-visible { outline: 2px solid var(--color-chilli); outline-offset: 2px; }
+}
+
+@utility btn { @apply inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold transition active:scale-[.98] disabled:opacity-50 disabled:pointer-events-none; }
+@utility btn-primary { @apply btn bg-gradient-to-b from-maroon-600 to-maroon-800 text-cream ring-1 ring-inset ring-gold-light/35 hover:from-maroon-700 hover:to-maroon-900 shadow-lg shadow-maroon-900/25; }
+@utility btn-gold { @apply btn bg-gradient-to-b from-gold-light to-turmeric text-maroon-900 ring-1 ring-inset ring-white/40 hover:from-turmeric-light hover:to-gold-light shadow-lg shadow-black/15; }
+@utility btn-ghost { @apply btn border border-gold/60 bg-white/50 text-maroon-700 hover:border-gold hover:bg-gold-pale; }
+@utility input { @apply w-full rounded-xl border border-maroon-700/20 bg-white px-3.5 py-2.5 text-sm text-ink placeholder:text-ink/40 outline-none transition focus:border-maroon-700 focus:ring-2 focus:ring-maroon-700/15; }
+@utility label { @apply mb-1 block text-xs font-semibold uppercase tracking-wide text-ink/70; }
+@utility card { @apply rounded-3xl bg-white ring-1 ring-gold/25 shadow-[0_10px_30px_-18px_rgba(94,21,21,.35)]; }
+/* Double gold frame, like a framed temple painting */
+@utility gold-frame { @apply ring-2 ring-gold-light; outline: 1px solid color-mix(in srgb, var(--color-gold) 55%, transparent); outline-offset: 5px; }
+/* Temple-gopuram arch for photos */
+@utility arch { border-radius: 999px 999px 1.75rem 1.75rem; }
+@utility container-x { @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8; }
+@utility telugu { font-family: var(--font-telugu); }
+
+@layer components {
+  .prose-policy h2 { @apply mt-10 mb-3 font-display text-2xl font-bold text-maroon-700; }
+  .prose-policy h3 { @apply mt-6 mb-2 font-semibold text-lg; }
+  .prose-policy p, .prose-policy li { @apply leading-relaxed text-ink/80; }
+  .prose-policy ul { @apply list-disc pl-6 space-y-1.5 my-3; }
+  .prose-policy a { @apply text-maroon-700 underline underline-offset-2; }
+}
+
+.grain {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.05'/%3E%3C/svg%3E");
+}
+
+/* Headings: elegant semibold instead of heavy black */
+.font-display { letter-spacing: -0.015em; }
+.font-display.font-black { font-weight: 620; }
+.font-display.font-bold { font-weight: 600; }
+
+/* Gold temple-saree border band */
+.temple-border {
+  height: 14px;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='14'%3E%3Cpath d='M0 1h28M0 13h28' stroke='%23d4a843' stroke-width='1.4'/%3E%3Cpath d='M0 11 7 4l7 7 7-7 7 7' fill='none' stroke='%23d4a843' stroke-width='1.3'/%3E%3Cpath d='M14 4.2 15.8 6 14 7.8 12.2 6Z' fill='%23d4a843'/%3E%3Ccircle cx='7' cy='9' r='1.2' fill='%23d4a843'/%3E%3Ccircle cx='21' cy='9' r='1.2' fill='%23d4a843'/%3E%3C/svg%3E") repeat-x center / 28px 14px;
+}
+
+/* Faint kolam lattice for section backgrounds */
+.kolam-bg {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48'%3E%3Cpath d='M24 6 42 24 24 42 6 24Z' fill='none' stroke='%23b88a2e' stroke-opacity='.10'/%3E%3Ccircle cx='24' cy='24' r='2' fill='%23b88a2e' fill-opacity='.14'/%3E%3Ccircle cx='0' cy='0' r='1.5' fill='%23b88a2e' fill-opacity='.14'/%3E%3Ccircle cx='48' cy='0' r='1.5' fill='%23b88a2e' fill-opacity='.14'/%3E%3Ccircle cx='0' cy='48' r='1.5' fill='%23b88a2e' fill-opacity='.14'/%3E%3Ccircle cx='48' cy='48' r='1.5' fill='%23b88a2e' fill-opacity='.14'/%3E%3C/svg%3E");
+}
+
+/* Godavari taste-map animations */
+@keyframes godavari-current { to { stroke-dashoffset: -400; } }
+@keyframes pin-pulse { 0% { transform: scale(1); opacity: .6; } 100% { transform: scale(2.4); opacity: 0; } }
+.godavari-current { stroke-dasharray: 6 14; animation: godavari-current 18s linear infinite; }
+.pin-pulse { animation: pin-pulse 1.8s ease-out infinite; }
+
+.wave-divider { mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 40' preserveAspectRatio='none'%3E%3Cpath d='M0 20 Q150 0 300 20 T600 20 T900 20 T1200 20 V40 H0Z'/%3E%3C/svg%3E") bottom / 100% 100% no-repeat; }
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}
+
+/* Custom-order banner: banana leaves swaying gently */
+@keyframes leaf-sway { 0%, 100% { transform: rotate(var(--r, 0deg)); } 50% { transform: rotate(calc(var(--r, 0deg) + 3deg)); } }
+.leaf-sway { transform-origin: 50% 95%; animation: leaf-sway 7s ease-in-out infinite; }
+
+/* Thoranam: mango leaves and marigolds swaying from the cord like a garland in a breeze */
+@keyframes thoranam-sway { 0%, 100% { transform: rotate(-10deg); } 50% { transform: rotate(10deg); } }
+@keyframes thoranam-swing { 0%, 100% { transform: rotate(9deg) translateY(1px); } 50% { transform: rotate(-9deg) translateY(-1px); } }
+.thoranam-leaf, .thoranam-flower { transform-box: fill-box; transform-origin: 50% 0; animation: thoranam-sway 4s ease-in-out infinite; }
+.thoranam-flower { animation-name: thoranam-swing; }
+@keyframes thoranam-scroll { from { transform: translateX(0); } to { transform: translateX(var(--loop, -736px)); } }
+.thoranam-scroll { animation: thoranam-scroll 28s linear infinite; }
+
+/* Taste map: gold routes flowing from each town into the Velpuru kitchen; products circling the hub */
+@keyframes supply-flow { to { stroke-dashoffset: -60; } }
+.supply-route { stroke-dasharray: 2 10; animation: supply-flow 2.4s linear infinite; }
+@keyframes hub-spin { to { transform: rotate(360deg); } }
+.hub-orbit { animation: hub-spin 60s linear infinite; }
+.hub-orbit-item { animation: hub-spin 60s linear infinite reverse; }
+
+/* Footer tagline watermark: gold outline with a soft glow and a slow light sweep, like sunlight on zari */
+.tagline-shimmer {
+  color: transparent;
+  -webkit-text-stroke: 1.2px rgba(236, 211, 147, 0.62);
+  background-image:
+    linear-gradient(105deg, transparent 32%, rgba(255, 244, 210, 0.95) 46%, rgba(246, 217, 138, 0.9) 54%, transparent 68%),
+    linear-gradient(to bottom, rgba(233, 207, 138, 0.3), rgba(233, 207, 138, 0.06));
+  background-size: 250% 100%, 100% 100%;
+  background-repeat: no-repeat;
+  -webkit-background-clip: text;
+  background-clip: text;
+  animation: tagline-sweep 7s ease-in-out infinite;
+}
+.tagline-glow { filter: drop-shadow(0 0 10px rgba(233, 196, 106, 0.2)) drop-shadow(0 2px 2px rgba(0, 0, 0, 0.35)); }
+@keyframes tagline-sweep { 0% { background-position: 130% 0, 0 0; } 60%, 100% { background-position: -30% 0, 0 0; } }
+
+
+/* Banner temple lamps: lamps sway on their chains, flames flicker */
+@keyframes lamp-sway { 0%, 100% { transform: rotate(-3deg); } 50% { transform: rotate(3deg); } }
+@keyframes lamp-flicker { 0%, 100% { transform: scale(1, 1); opacity: 1; } 30% { transform: scale(.92, 1.08); opacity: .9; } 60% { transform: scale(1.06, .94); opacity: 1; } }
+.lamp-sway { transform-box: fill-box; transform-origin: 50% 0; animation: lamp-sway 4.5s ease-in-out infinite; }
+.lamp-flame { transform-box: fill-box; transform-origin: 50% 100%; animation: lamp-flicker 1.2s ease-in-out infinite; }
+
+/* Hero food spread: each item floats gently */
+@keyframes hero-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+.hero-float { animation: hero-float 4.5s ease-in-out infinite; }
+
+/* Hero corner leaves hang from above and sway around their centre */
+@keyframes leaf-hang { 0%, 100% { transform: rotate(var(--r, 180deg)); } 50% { transform: rotate(calc(var(--r, 180deg) + 4deg)); } }
+.leaf-hang { transform: rotate(var(--r, 180deg)); animation: leaf-hang 7s ease-in-out infinite; }
+
+/* Hero gold seal: slow spin of the ring text */
+@keyframes hero-seal { to { transform: rotate(360deg); } }
+.hero-seal { animation: hero-seal 30s linear infinite; }
+
+/* Hero food spread: light rays, sparkles, steam, marigold strings */
+@keyframes hero-rays { to { transform: translate(-50%, -50%) rotate(360deg); } }
+.hero-rays { animation: hero-rays 90s linear infinite; }
+@keyframes hero-twinkle { 0%, 100% { opacity: .15; transform: scale(.6); } 50% { opacity: 1; transform: scale(1.15); } }
+.hero-twinkle { animation: hero-twinkle 3.2s ease-in-out infinite; }
+@keyframes hero-steam { 0% { opacity: 0; transform: translateY(10px) scaleX(.9); } 30% { opacity: .8; } 100% { opacity: 0; transform: translateY(-14px) scaleX(1.15); } }
+.hero-steam { transform-box: fill-box; transform-origin: 50% 100%; filter: blur(2px); animation: hero-steam 3.6s ease-out infinite; }
+@keyframes marigold-swing { 0%, 100% { transform: translateX(-50%) rotate(-3deg); } 50% { transform: translateX(-50%) rotate(3deg); } }
+.marigold-swing { transform-origin: 50% 0; animation: marigold-swing 4.8s ease-in-out infinite; }
+
+/* Hero centre: bowl bobs, leaves sway, plate gleams, badge shines */
+@keyframes hero-bob { 0%, 100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-8px) rotate(-1deg); } }
+.hero-bob { animation: hero-bob 5s ease-in-out infinite; }
+@keyframes hero-leaf { 0%, 100% { transform: translate(-50%, -50%) rotate(var(--r)); } 50% { transform: translate(-50%, -50%) rotate(calc(var(--r) + 3deg)) scale(1.02); } }
+.hero-leaf { transform: translate(-50%, -50%) rotate(var(--r)); animation: hero-leaf 7s ease-in-out infinite; }
+@keyframes thali-gleam { to { stroke-dashoffset: -100; } }
+.thali-gleam { opacity: .75; animation: thali-gleam 4s linear infinite; }
+.badge-shine::after { content: ""; position: absolute; inset: 0; background: linear-gradient(105deg, transparent 30%, rgba(255,255,255,.85) 50%, transparent 70%); transform: translateX(-120%); animation: badge-shine 3.5s ease-in-out infinite; }
+@keyframes badge-shine { 0%, 55% { transform: translateX(-120%); } 85%, 100% { transform: translateX(120%); } }
+
+/* Hero river ripples drift sideways */
+@keyframes hero-ripple { to { transform: translateX(-360px); } }
+.hero-ripple { animation: hero-ripple 14s linear infinite; }
+
+
+/* order page: "Payment received" pop */
+@keyframes paid-pop { 0% { transform: scale(.6); opacity: 0; } 60% { transform: scale(1.06); opacity: 1; } 100% { transform: scale(1); } }
+.paid-pop { animation: paid-pop .5s cubic-bezier(.2,1.2,.4,1) both; }
