@@ -3,13 +3,14 @@ import { headers } from "next/headers";
 import { z } from "zod";
 import { checkoutSchema, createOrder, getOrderByCode, quote } from "@/lib/orders";
 import { startPhonePe } from "@/lib/payments";
+import { INDIA, isCountry } from "@/lib/countries";
 
 const itemsSchema = z.array(z.object({ variantId: z.number().int().positive(), qty: z.number().int().min(1).max(50) })).max(40);
 
-export async function quoteAction(items: unknown) {
+export async function quoteAction(items: unknown, country: unknown = INDIA) {
   const parsed = itemsSchema.safeParse(items);
   if (!parsed.success) return { lines: [], subtotal: 0, shipping: 0, problems: ["Invalid cart"] };
-  const q = await quote(parsed.data);
+  const q = await quote(parsed.data, typeof country === "string" && isCountry(country) ? country : INDIA);
   return { lines: q.lines.map((l) => ({ variantId: l.variantId, price: l.price, qty: l.qty })), subtotal: q.subtotal, shipping: q.shipping, problems: q.problems };
 }
 

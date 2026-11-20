@@ -102,8 +102,10 @@ export async function shippingLabelsPdf(orders: Order[], s: Settings) {
     txt(p, f, o.customer_name, M, y, 16, { bold: true, maxW: W - 2 * M }); y -= 18;
     for (const line of wrap(f.r, o.address, 11, W - 2 * M, 3)) { txt(p, f, line, M, y, 11); y -= 14; }
     txt(p, f, `${o.city}, ${o.state}`, M, y, 11, { bold: true, maxW: W - 2 * M }); y -= 22;
-    txt(p, f, `PIN ${o.pincode}`, M, y, 20, { bold: true });
-    txt(p, f, `Ph: ${o.phone}`, W - M, y + 2, 12, { bold: true, align: "right" }); y -= 16;
+    const abroad = !!o.country && o.country !== "India";
+    // abroad: postcode + COUNTRY in big letters (what the international courier sorts by)
+    txt(p, f, abroad ? `${o.pincode}  ${o.country.toUpperCase()}` : `PIN ${o.pincode}`, M, y, abroad ? 16 : 20, { bold: true, maxW: W - 2 * M - 110 });
+    txt(p, f, `Ph: ${o.phone}`, W - M, y + 2, abroad ? 10 : 12, { bold: true, align: "right", maxW: 105 }); y -= 16;
 
     // contents
     p.drawLine({ start: { x: 6, y }, end: { x: W - 6, y }, thickness: 0.8, color: INK }); y -= 14;

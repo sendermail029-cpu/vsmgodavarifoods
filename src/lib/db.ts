@@ -95,6 +95,7 @@ const SCHEMA: string[] = [
     city TEXT NOT NULL,
     state TEXT NOT NULL,
     pincode TEXT NOT NULL,
+    country TEXT NOT NULL DEFAULT 'India',
     notes TEXT,
     items_json TEXT NOT NULL,
     subtotal INTEGER NOT NULL,
@@ -189,6 +190,7 @@ async function init(client: Client) {
   // migrations for databases created before a column existed
   const cols = (await client.execute("PRAGMA table_info(orders)")).rows.map((r) => String(r.name));
   if (!cols.includes("alert_at")) await client.execute("ALTER TABLE orders ADD COLUMN alert_at TEXT");
+  if (!cols.includes("country")) await client.execute("ALTER TABLE orders ADD COLUMN country TEXT NOT NULL DEFAULT 'India'");
 
   // default settings (only inserts missing keys)
   await client.batch(

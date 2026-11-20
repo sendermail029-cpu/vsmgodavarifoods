@@ -20,6 +20,9 @@ export const shippingRules = (s: Settings): ShippingRules => ({
   packGrams: Number(s.packing_grams) || 0,
 });
 
+/** International delivery: on/off and the rates list (see parseIntlRates). */
+export const intlEnabled = (s: Settings) => s.intl_enabled === "1";
+
 export function phonePeEnabled() {
   return Boolean(process.env.PHONEPE_MERCHANT_ID && process.env.PHONEPE_SALT_KEY);
 }

@@ -66,6 +66,16 @@ export function SettingsForm({ initial, phonepe, phonepeEnv }: { initial: Record
           {f("dispatch_days", "Dispatch time (working days)", {}, "Shown in the shipping policy, e.g. 1–3")}
         </section>
         <section className="card space-y-4 p-5 sm:p-6">
+          <h2 className="font-display text-xl font-bold">International delivery</h2>
+          {toggle("intl_enabled", "Accept orders from other countries")}
+          <div>
+            <label className="label" htmlFor="intl_rates">Rates (₹) — one country per line: Country | per kg | minimum</label>
+            <textarea id="intl_rates" rows={8} className="input font-mono text-sm" value={s.intl_rates ?? ""} onChange={(e) => setS({ ...s, intl_rates: e.target.value })}
+              placeholder={"United States | 2000 | 2000\nUnited Arab Emirates | 1000 | 1000\nOther countries | 2200 | 2200"} />
+            <p className="mt-1 text-xs text-ink/50">Charged on the packed weight, rounded up to whole kg (2.3 kg → 3 kg), never below the minimum. No free delivery abroad. &quot;Other countries&quot; is used for every country not listed — remove that line to accept only the listed countries. Cash on Delivery is never offered abroad.</p>
+          </div>
+        </section>
+        <section className="card space-y-4 p-5 sm:p-6">
           <h2 className="font-display text-xl font-bold">Contact, map & social</h2>
           {f("phone2", "Second mobile number", { inputMode: "tel" }, "Shown next to the main number on the website")}
           {f("maps_url", "Google Maps link", {}, "Share → Copy link from Google Maps")}

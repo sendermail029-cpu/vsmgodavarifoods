@@ -138,6 +138,9 @@ export const DEFAULT_SETTINGS: Record<string, string> = {
   shipping_per_kg: "50",
   min_shipping: "50",
   packing_grams: "150",
+  // international delivery: off until the owner checks the courier prices
+  intl_enabled: "0",
+  intl_rates: "United States | 2000 | 2000\nCanada | 2000 | 2000\nUnited Kingdom | 1800 | 1800\nAustralia | 1900 | 1900\nUnited Arab Emirates | 1000 | 1000\nSingapore | 1200 | 1200\nOther countries | 2200 | 2200",
   announcement: "Free delivery across India on orders above ₹1,499",
   fssai_license: "",
   grievance_officer: "Customer Care Team, VSM Godavari Foods",

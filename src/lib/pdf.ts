@@ -95,7 +95,7 @@ export async function invoicePdf(o: Order, s: Settings) {
   text(c, "BILL TO", M, top, 7.5, true, GOLD);
   text(c, o.customer_name, M, top - 14, 11, true);
   let y = top - 28;
-  for (const line of wrap(f, `${o.address}, ${o.city}, ${o.state} - ${o.pincode}`, 9, 260)) { text(c, line, M, y, 9); y -= 12; }
+  for (const line of wrap(f, `${o.address}, ${o.city}, ${o.state} - ${o.pincode}${o.country && o.country !== "India" ? `, ${o.country}` : ""}`, 9, 260)) { text(c, line, M, y, 9); y -= 12; }
   text(c, `Phone: +91 ${o.phone}${o.email ? `   ${o.email}` : ""}`, M, y, 9, false, GREY);
 
   const rx = W - M;

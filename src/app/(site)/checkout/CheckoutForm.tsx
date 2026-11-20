@@ -5,6 +5,7 @@ import { Banknote, CreditCard, Loader2, Lock, QrCode, Smartphone, AlertCircle, W
 import { useCart } from "@/components/cart/CartProvider";
 import { ProductArt } from "@/components/ProductArt";
 import { rupees } from "@/lib/format";
+import { COUNTRIES, INDIA } from "@/lib/countries";
 import { placeOrderAction, quoteAction } from "./actions";
 
 function Field({ name, label, error, ...rest }: { name: string; label: string; error?: string } & React.InputHTMLAttributes<HTMLInputElement>) {
@@ -22,8 +23,10 @@ type Quote = Awaited<ReturnType<typeof quoteAction>>;
 
 const STATES = ["Andhra Pradesh", "Telangana", "Karnataka", "Tamil Nadu", "Kerala", "Maharashtra", "Odisha", "Delhi", "Gujarat", "West Bengal", "Uttar Pradesh", "Madhya Pradesh", "Rajasthan", "Punjab", "Haryana", "Bihar", "Jharkhand", "Chhattisgarh", "Goa", "Assam", "Uttarakhand", "Himachal Pradesh", "Jammu & Kashmir", "Puducherry", "Other"];
 
-export function CheckoutForm({ options, whatsapp }: { options: Opts; whatsapp: string }) {
+export function CheckoutForm({ options, whatsapp, international }: { options: Opts; whatsapp: string; international: boolean }) {
   const { lines, ready, setQty } = useCart();
+  const [country, setCountry] = useState(INDIA);
+  const abroad = country !== INDIA;
   const [q, setQ] = useState<Quote | null>(null);
   const [pending, start] = useTransition();
   const [err, setErr] = useState<string | null>(null);
@@ -38,9 +41,11 @@ export function CheckoutForm({ options, whatsapp }: { options: Opts; whatsapp: s
     { id: "upi", pay: "upi_qr", app: "upi", icon: QrCode, title: "Any UPI app / scan QR", desc: "Paytm, BHIM or any UPI app — or scan the QR code.", tint: "text-leaf", ok: options.upiQr },
     { id: "card", pay: "phonepe", app: "", icon: CreditCard, title: "Debit / Credit card", desc: "Visa, Mastercard, RuPay — on PhonePe's secure payment page.", tint: "text-maroon-700", ok: options.phonepe },
     { id: "cod", pay: "cod", app: "", icon: Banknote, title: "Cash on Delivery", desc: options.codFee ? `₹${options.codFee} COD handling fee applies.` : "Pay in cash when your order arrives.", tint: "text-gold", ok: options.cod },
-  ].filter((m) => m.id !== "cod" || m.ok), [options]); // Cash on Delivery is hidden completely when switched off
+  ].filter((m) => m.id !== "cod" || (m.ok && !abroad)), [options, abroad]); // Cash on Delivery: hidden when switched off, and never abroad
   const available = methods.filter((m) => m.ok);
-  const [choice, setChoice] = useState(available[0]?.id ?? "");
+  const [picked, setChoice] = useState(available[0]?.id ?? "");
+  // if the picked method disappears (e.g. COD after choosing another country) fall back to the first available one
+  const choice = available.some((m) => m.id === picked) ? picked : available[0]?.id ?? "";
   const chosen = methods.find((m) => m.id === choice);
   const payment = chosen?.pay ?? "";
 
@@ -49,9 +54,10 @@ export function CheckoutForm({ options, whatsapp }: { options: Opts; whatsapp: s
   useEffect(() => {
     if (!ready) return;
     let live = true;
-    quoteAction(items).then((r) => live && setQ(r));
+    setQ(null);
+    quoteAction(items, country).then((r) => live && setQ(r));
     return () => { live = false; };
-  }, [items, ready]);
+  }, [items, ready, country]);
 
   if (!ready) return <div className="py-24 text-center"><Loader2 className="mx-auto h-8 w-8 animate-spin text-maroon-700" /></div>;
   if (!lines.length) return (
@@ -70,7 +76,7 @@ export function CheckoutForm({ options, whatsapp }: { options: Opts; whatsapp: s
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
     const input = {
-      name: String(fd.get("name") || ""), phone: String(fd.get("phone") || "").replace(/\s/g, ""), email: String(fd.get("email") || ""),
+      country, name: String(fd.get("name") || ""), phone: String(fd.get("phone") || "").replace(/[\s\-()]/g, ""), email: String(fd.get("email") || ""),
       address: String(fd.get("address") || ""), city: String(fd.get("city") || ""), state: String(fd.get("state") || ""),
       pincode: String(fd.get("pincode") || ""), notes: String(fd.get("notes") || ""), payment, items, acceptTerms: fd.get("terms") === "on",
     };
@@ -88,8 +94,19 @@ export function CheckoutForm({ options, whatsapp }: { options: Opts; whatsapp: s
         <section className="card p-5 sm:p-7">
           <h2 className="font-display text-xl font-bold">Delivery details</h2>
           <div className="mt-5 grid gap-4 sm:grid-cols-2">
+            {international && (
+              <div className="sm:col-span-2">
+                <label className="label" htmlFor="country">Country</label>
+                <select id="country" name="country" className="input" value={country} autoComplete="country-name" onChange={(e) => setCountry(e.target.value)}>
+                  <option value={INDIA}>India</option>
+                  <optgroup label="International delivery">{COUNTRIES.map((c) => <option key={c} value={c}>{c}</option>)}</optgroup>
+                </select>
+                {fields.country && <p className="mt-1 text-xs text-chilli">{fields.country}</p>}
+                {abroad && <p className="mt-1 text-xs text-ink/60">International orders are shipped by courier. Delivery charge depends on the country and parcel weight. Any customs duty in your country is paid by you.</p>}
+              </div>
+            )}
             <Field error={fields.name} name="name" label="Full name" autoComplete="name" required />
-            <Field error={fields.phone} name="phone" label="Mobile number" autoComplete="tel" inputMode="tel" placeholder="10-digit mobile" required />
+            <Field key={abroad ? "ph-intl" : "ph-in"} error={fields.phone} name="phone" label={abroad ? "Phone (with country code)" : "Mobile number"} autoComplete="tel" inputMode="tel" placeholder={abroad ? "+1 415 555 0123" : "10-digit mobile"} required />
             <div className="sm:col-span-2"><Field error={fields.email} name="email" label="Email (optional, for order updates)" type="email" autoComplete="email" /></div>
             <div className="sm:col-span-2">
               <label className="label" htmlFor="address">Full address</label>
@@ -97,11 +114,15 @@ export function CheckoutForm({ options, whatsapp }: { options: Opts; whatsapp: s
               {fields.address && <p className="mt-1 text-xs text-chilli">{fields.address}</p>}
             </div>
             <Field error={fields.city} name="city" label="City / Town" autoComplete="address-level2" required />
-            <div>
-              <label className="label" htmlFor="state">State</label>
-              <select id="state" name="state" className="input" defaultValue="Andhra Pradesh">{STATES.map((s) => <option key={s}>{s}</option>)}</select>
-            </div>
-            <Field error={fields.pincode} name="pincode" label="Pincode" inputMode="numeric" maxLength={6} autoComplete="postal-code" required />
+            {abroad ? (
+              <Field key="st-intl" error={fields.state} name="state" label="State / Province / Region" autoComplete="address-level1" required />
+            ) : (
+              <div>
+                <label className="label" htmlFor="state">State</label>
+                <select key="st-in" id="state" name="state" className="input" defaultValue="Andhra Pradesh">{STATES.map((s) => <option key={s}>{s}</option>)}</select>
+              </div>
+            )}
+            <Field key={abroad ? "pc-intl" : "pc-in"} error={fields.pincode} name="pincode" label={abroad ? "Postcode / ZIP code" : "Pincode"} inputMode={abroad ? "text" : "numeric"} maxLength={abroad ? 12 : 6} autoComplete="postal-code" required />
             <div className="sm:col-span-2">
               <label className="label" htmlFor="notes">Order notes (optional)</label>
               <input id="notes" name="notes" className="input" placeholder="Spice preference, delivery instructions…" maxLength={400} />
@@ -158,7 +179,7 @@ export function CheckoutForm({ options, whatsapp }: { options: Opts; whatsapp: s
           ) : null}
           <dl className="mt-4 space-y-2 border-t border-dashed border-maroon-700/20 pt-4 text-sm">
             <div className="flex justify-between"><dt>Subtotal</dt><dd className="font-semibold">{q ? rupees(subtotal) : "…"}</dd></div>
-            <div className="flex justify-between"><dt>Delivery</dt><dd className="font-semibold">{q ? (shipping ? rupees(shipping) : "FREE") : "…"}</dd></div>
+            <div className="flex justify-between"><dt>{abroad ? `Delivery to ${country}` : "Delivery"}</dt><dd className="font-semibold">{q ? (shipping ? rupees(shipping) : "FREE") : "…"}</dd></div>
             {codFee > 0 && <div className="flex justify-between"><dt>COD fee</dt><dd className="font-semibold">{rupees(codFee)}</dd></div>}
             <div className="flex justify-between border-t border-maroon-700/10 pt-2 text-lg"><dt className="font-bold">Total</dt><dd className="font-black text-maroon-700">{q ? rupees(total) : "…"}</dd></div>
           </dl>

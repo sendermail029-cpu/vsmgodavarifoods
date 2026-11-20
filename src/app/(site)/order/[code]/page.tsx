@@ -186,7 +186,7 @@ export default async function OrderPage({ params, searchParams }: { params: Prom
         <div className="card p-6 text-sm">
           <h2 className="font-display text-xl font-bold">Delivery to</h2>
           <p className="mt-3 font-semibold">{order.customer_name}</p>
-          <p className="text-ink/70">{order.address}, {order.city}, {order.state} – {order.pincode}</p>
+          <p className="text-ink/70">{order.address}, {order.city}, {order.state} – {order.pincode}{order.country && order.country !== "India" ? `, ${order.country}` : ""}</p>
           <p className="text-ink/70">+91 {order.phone}</p>
           <p className="mt-4 text-ink/70">Payment: <b>{order.payment_method === "cod" ? "Cash on Delivery" : order.payment_method === "phonepe" ? "PhonePe / UPI" : "UPI"}</b></p>
           <a className="btn-gold mt-5" target="_blank" rel="noopener noreferrer" href={`https://wa.me/${s.whatsapp}?text=${encodeURIComponent(`Hello VSM Godavari Foods, about my order ${order.code}`)}`}>Questions? WhatsApp us</a>

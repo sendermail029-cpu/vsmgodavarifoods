@@ -45,7 +45,7 @@ export default async function OrderDetail({ params }: { params: Promise<{ id: st
             </div>
             <div>
               <h2 className="font-display text-xl font-bold">Ship to</h2>
-              <p className="mt-2 whitespace-pre-line text-sm">{o.customer_name}{"\n"}{o.address}{"\n"}{o.city}, {o.state} – {o.pincode}{"\n"}Ph: {o.phone}</p>
+              <p className="mt-2 whitespace-pre-line text-sm">{o.customer_name}{"\n"}{o.address}{"\n"}{o.city}, {o.state} – {o.pincode}{o.country && o.country !== "India" ? `, ${o.country.toUpperCase()}` : ""}{"\n"}Ph: {o.phone}</p>
               {o.notes && <p className="mt-3 rounded-xl bg-turmeric/20 p-3 text-sm"><b>Note:</b> {o.notes}</p>}
             </div>
           </section>

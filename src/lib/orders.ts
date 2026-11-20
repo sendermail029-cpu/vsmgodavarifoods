@@ -3,27 +3,40 @@ import { randomBytes, timingSafeEqual } from "node:crypto";
 import { z } from "zod";
 import { db } from "./db";
 import { calcShipping } from "./format";
-import { getSettings, shippingRules, paymentOptions } from "./settings";
+import { getSettings, shippingRules, paymentOptions, intlEnabled } from "./settings";
+import { INDIA, intlRateFor, intlShipping, isCountry, parseIntlRates } from "./countries";
 
 export const checkoutSchema = z.object({
   name: z.string().trim().min(2, "Please enter your name").max(80),
-  phone: z.string().trim().regex(/^(\+?91)?[6-9]\d{9}$/, "Enter a valid 10-digit Indian mobile number"),
+  country: z.string().trim().max(60).default(INDIA),
+  phone: z.string().trim().max(20),
   email: z.union([z.literal(""), z.string().trim().email("Enter a valid email").max(120)]).optional(),
   address: z.string().trim().min(8, "Please enter your full address").max(400),
   city: z.string().trim().min(2, "Enter your city").max(60),
   state: z.string().trim().min(2, "Enter your state").max(60),
-  pincode: z.string().trim().regex(/^[1-9]\d{5}$/, "Enter a valid 6-digit pincode"),
+  pincode: z.string().trim().max(12),
   notes: z.string().trim().max(400).optional(),
   payment: z.enum(["upi_qr", "phonepe", "cod"]),
   items: z.array(z.object({ variantId: z.number().int().positive(), qty: z.number().int().min(1).max(50) })).min(1, "Your cart is empty").max(40),
   acceptTerms: z.literal(true, { message: "Please accept the Terms & Conditions" }),
+}).superRefine((d, ctx) => {
+  // India: 10-digit mobile + 6-digit PIN. Abroad: phone with country code + postcode, no COD.
+  if (!isCountry(d.country)) ctx.addIssue({ code: "custom", path: ["country"], message: "Choose your country" });
+  if (d.country === INDIA) {
+    if (!/^(\+?91)?[6-9]\d{9}$/.test(d.phone)) ctx.addIssue({ code: "custom", path: ["phone"], message: "Enter a valid 10-digit Indian mobile number" });
+    if (!/^[1-9]\d{5}$/.test(d.pincode)) ctx.addIssue({ code: "custom", path: ["pincode"], message: "Enter a valid 6-digit pincode" });
+  } else {
+    if (!/^\+?\d{7,15}$/.test(d.phone)) ctx.addIssue({ code: "custom", path: ["phone"], message: "Enter your phone number with country code, e.g. +14155550123" });
+    if (!/^[A-Za-z0-9][A-Za-z0-9 -]{1,10}$/.test(d.pincode)) ctx.addIssue({ code: "custom", path: ["pincode"], message: "Enter a valid postcode / ZIP code" });
+    if (d.payment === "cod") ctx.addIssue({ code: "custom", path: ["payment"], message: "Cash on Delivery is only available in India" });
+  }
 });
 export type CheckoutInput = z.infer<typeof checkoutSchema>;
 
 export type OrderItem = { variantId: number; productId: number; name: string; label: string; price: number; qty: number; grams: number };
 export type Order = {
   id: number; code: string; access_token: string; customer_name: string; phone: string; email: string | null;
-  address: string; city: string; state: string; pincode: string; notes: string | null; items: OrderItem[];
+  address: string; city: string; state: string; pincode: string; country: string; notes: string | null; items: OrderItem[];
   subtotal: number; shipping: number; total: number; payment_method: "upi_qr" | "phonepe" | "cod";
   payment_status: "pending" | "submitted" | "paid" | "failed" | "refunded" | "expired"; utr: string | null; provider_txn: string | null;
   status: "placed" | "confirmed" | "packed" | "shipped" | "delivered" | "cancelled"; tracking: string | null;
@@ -41,7 +54,7 @@ function newCode() {
 }
 
 /** Prices, shipping and stock are ALWAYS computed on the server from the database — never trusted from the browser. */
-export async function quote(items: { variantId: number; qty: number }[]) {
+export async function quote(items: { variantId: number; qty: number }[], country: string = INDIA) {
   const c = await db();
   const ids = [...new Set(items.map((i) => i.variantId))];
   if (!ids.length) return { lines: [] as OrderItem[], subtotal: 0, shipping: 0, grams: 0, problems: [] as string[] };
@@ -64,7 +77,14 @@ export async function quote(items: { variantId: number; qty: number }[]) {
   }
   const subtotal = lines.reduce((s, l) => s + l.price * l.qty, 0);
   const grams = lines.reduce((s, l) => s + l.grams * l.qty, 0);
-  const shipping = calcShipping(subtotal, grams, shippingRules(await getSettings()), lines.reduce((s, l) => s + l.qty, 0));
+  const s = await getSettings(), count = lines.reduce((t, l) => t + l.qty, 0);
+  let shipping = 0;
+  if (country === INDIA) shipping = calcShipping(subtotal, grams, shippingRules(s), count);
+  else {
+    const rate = intlEnabled(s) ? intlRateFor(country, parseIntlRates(s.intl_rates)) : null;
+    if (!rate) problems.push(`Sorry, we don't deliver to ${country} yet. Please contact us on WhatsApp.`);
+    else if (lines.length) shipping = intlShipping(grams, count, shippingRules(s).packGrams ?? 0, rate);
+  }
   return { lines, subtotal, shipping, grams, problems };
 }
 
@@ -79,7 +99,7 @@ export async function createOrder(input: CheckoutInput) {
   for (const i of input.items) merged.set(i.variantId, (merged.get(i.variantId) || 0) + i.qty);
   const items = [...merged].map(([variantId, qty]) => ({ variantId, qty }));
 
-  const q = await quote(items);
+  const q = await quote(items, input.country);
   if (q.problems.length) return { error: q.problems.join(" ") } as const;
   const codFee = input.payment === "cod" ? opts.codFee * 100 : 0;
   const total = q.subtotal + q.shipping + codFee;
@@ -94,9 +114,10 @@ export async function createOrder(input: CheckoutInput) {
     const code = newCode();
     const token = randomBytes(18).toString("base64url");
     await tx.execute({
-      sql: `INSERT INTO orders(code, access_token, customer_name, phone, email, address, city, state, pincode, notes, items_json, subtotal, shipping, total, payment_method, alert_at)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?, CASE WHEN ? = 'cod' THEN datetime('now') END)`,
-      args: [code, token, input.name, input.phone.replace(/^\+?91/, ""), input.email || null, input.address, input.city, input.state, input.pincode,
+      sql: `INSERT INTO orders(code, access_token, customer_name, phone, email, address, city, state, pincode, country, notes, items_json, subtotal, shipping, total, payment_method, alert_at)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?, CASE WHEN ? = 'cod' THEN datetime('now') END)`,
+      args: [code, token, input.name, input.country === INDIA ? input.phone.replace(/^\+?91/, "") : "+" + input.phone.replace(/^\+/, ""), input.email || null,
+        input.address, input.city, input.state, input.pincode.toUpperCase(), input.country,
         input.notes || null, JSON.stringify(q.lines), q.subtotal, q.shipping + codFee, total, input.payment, input.payment],
     });
     for (const l of q.lines) {

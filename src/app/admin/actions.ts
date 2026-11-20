@@ -315,7 +315,12 @@ export async function saveSettings(input: Record<string, string>): Promise<Resul
   const stmts = [];
   for (const k of allowed) {
     if (!(k in input)) continue;
-    let v = String(input[k] ?? "").trim().slice(0, 300);
+    let v = String(input[k] ?? "").trim().slice(0, k === "intl_rates" ? 4000 : 300);
+    if (k === "intl_enabled" && !["0", "1"].includes(v)) v = "0";
+    if (k === "intl_rates") {
+      const bad = v.split(/\r?\n/).map((l) => l.trim()).filter(Boolean).find((l) => !/^[^|]{2,60}\|\s*\d{1,6}(\.\d+)?\s*(\|\s*\d{1,6}(\.\d+)?\s*)?$/.test(l));
+      if (bad) return { ok: false, error: `International rate line not understood: "${bad.slice(0, 40)}". Use: Country | per kg | minimum` };
+    }
     if (k === "upi_id" && v && !/^[\w.\-]{2,}@[a-zA-Z]{2,}$/.test(v)) return { ok: false, error: "UPI ID looks invalid (example: yourname@okhdfcbank)" };
     if (k === "upi_account_type" && !["personal", "business"].includes(v)) return { ok: false, error: "UPI account type must be personal or business" };
     if (k === "whatsapp") v = v.replace(/\D/g, "");
