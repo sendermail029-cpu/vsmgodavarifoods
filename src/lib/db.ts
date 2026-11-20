@@ -9,7 +9,7 @@ import { SEED_CATEGORIES, SEED_PRODUCTS, DEFAULT_SETTINGS } from "./seed-data";
  * - Production (Vercel): set TURSO_DATABASE_URL + TURSO_AUTH_TOKEN
  *   (free Turso database) because serverless hosts have no persistent disk.
  */
-const globalForDb = globalThis as unknown as { __vsmDb?: Client; __vsmDbReady?: Promise<void> };
+const globalForDb = globalThis as unknown as { __vsmDb?: Client; __vsmDbReady?: Promise<void>; __vsmDbSchema?: number };
 
 function makeClient(): Client {
   const url = process.env.TURSO_DATABASE_URL;
@@ -156,6 +156,27 @@ const SCHEMA: string[] = [
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at TEXT NOT NULL DEFAULT (datetime('now'))
   )`,
+  // investors / group members and the business money book
+  `CREATE TABLE IF NOT EXISTS investors (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    phone TEXT,
+    note TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  )`,
+  // kind: invest = member puts money in, withdraw = member takes money out, expense = money used for the business
+  `CREATE TABLE IF NOT EXISTS money_entries (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    investor_id INTEGER REFERENCES investors(id),
+    kind TEXT NOT NULL,
+    amount INTEGER NOT NULL,
+    category TEXT,
+    note TEXT,
+    entry_date TEXT NOT NULL,
+    by_name TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_money_date ON money_entries(entry_date)`,
   `CREATE TABLE IF NOT EXISTS login_attempts (ip TEXT PRIMARY KEY, count INTEGER NOT NULL, first_at INTEGER NOT NULL)`,
   `CREATE INDEX IF NOT EXISTS idx_products_category ON products(category_id)`,
   `CREATE INDEX IF NOT EXISTS idx_variants_product ON variants(product_id)`,
@@ -216,6 +237,8 @@ async function init(client: Client) {
 
 export async function db(): Promise<Client> {
   if (!globalForDb.__vsmDb) globalForDb.__vsmDb = makeClient();
+  // re-run setup when new tables were added while the server is running (dev hot reload)
+  if (globalForDb.__vsmDbSchema !== SCHEMA.length) { globalForDb.__vsmDbReady = undefined; globalForDb.__vsmDbSchema = SCHEMA.length; }
   if (!globalForDb.__vsmDbReady) {
     globalForDb.__vsmDbReady = init(globalForDb.__vsmDb).catch((e) => {
       globalForDb.__vsmDbReady = undefined;

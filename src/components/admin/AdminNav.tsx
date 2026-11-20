@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { Boxes, ExternalLink, KeyRound, Wheat, FileBarChart, Tag, Megaphone, FolderTree, LayoutDashboard, LogOut, Menu, Package, Settings, ShoppingCart, X } from "lucide-react";
+import { Boxes, ExternalLink, HandCoins, KeyRound, Wheat, FileBarChart, Tag, Megaphone, FolderTree, LayoutDashboard, LogOut, Menu, Package, Settings, ShoppingCart, X } from "lucide-react";
 import { Logo } from "../brand/Logo";
 import { logoutAction } from "@/app/admin/actions";
 
@@ -15,6 +15,7 @@ const NAV = [
   { href: "/admin/categories", label: "Categories", icon: FolderTree },
   { href: "/admin/inventory", label: "Inventory", icon: Boxes },
   { href: "/admin/ingredients", label: "Ingredients stock", icon: Wheat },
+  { href: "/admin/investors", label: "Investors & money", icon: HandCoins },
   { href: "/admin/popup", label: "Website popup", icon: Megaphone },
   { href: "/admin/settings", label: "Settings & Payments", icon: Settings },
 ];

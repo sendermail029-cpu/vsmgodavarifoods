@@ -3,13 +3,13 @@ import ExcelJS from "exceljs";
 import type { SalesReport } from "./reports";
 
 /* Brand colours (ARGB) */
-const MAROON = "FF7A1F1F", MAROON_DARK = "FF5A1414", CREAM = "FFFFF7E8", GOLD = "FFE8C36A", GOLD_PALE = "FFFBF1DA";
+export const MAROON = "FF7A1F1F", MAROON_DARK = "FF5A1414", CREAM = "FFFFF7E8", GOLD = "FFE8C36A", GOLD_PALE = "FFFBF1DA";
 const GREEN_BG = "FFDCFCE7", GREEN = "FF166534", ORANGE_BG = "FFFFEDD5", ORANGE = "FF9A3412", YELLOW_BG = "FFFEF9C3", YELLOW = "FF854D0E", GREY_BG = "FFE4E4E7", GREY = "FF52525B";
 const ZEBRA = "FFFDFAF3";
 
 /** ₹ with Indian digit grouping (1,23,456.00). */
-const INR = '[>=10000000]"₹"##\\,##\\,##\\,##0.00;[>=100000]"₹"##\\,##\\,##0.00;"₹"#,##0.00';
-const DATE = "dd-mmm-yyyy";
+export const INR = '[>=10000000]"₹"##\\,##\\,##\\,##0.00;[>=100000]"₹"##\\,##\\,##0.00;"₹"#,##0.00';
+export const DATE = "dd-mmm-yyyy";
 const rupees = (paise: number) => Math.round(paise) / 100;
 const istDate = (utc: string) => new Date(new Date(utc.replace(" ", "T") + "Z").getTime() + 330 * 60_000);
 /** Excel stores dates without a time zone — give it the IST wall-clock time as if it were UTC. */
@@ -26,7 +26,7 @@ const STATUS: Record<string, string> = { placed: "Placed", confirmed: "Confirmed
 const thin = { style: "thin" as const, color: { argb: "FFEADFC8" } };
 const box = { top: thin, left: thin, bottom: thin, right: thin };
 
-function title(ws: ExcelJS.Worksheet, text: string, sub: string, cols: number) {
+export function title(ws: ExcelJS.Worksheet, text: string, sub: string, cols: number) {
   ws.mergeCells(1, 1, 1, cols);
   const t = ws.getCell(1, 1);
   t.value = text;
@@ -43,7 +43,7 @@ function title(ws: ExcelJS.Worksheet, text: string, sub: string, cols: number) {
   ws.getRow(2).height = 22;
 }
 
-function header(row: ExcelJS.Row) {
+export function header(row: ExcelJS.Row) {
   row.height = 24;
   row.eachCell((c) => {
     c.font = { bold: true, color: { argb: CREAM } };
@@ -53,7 +53,7 @@ function header(row: ExcelJS.Row) {
   });
 }
 
-function body(row: ExcelJS.Row, i: number) {
+export function body(row: ExcelJS.Row, i: number) {
   row.eachCell({ includeEmpty: true }, (c) => {
     c.border = box;
     c.alignment = { vertical: "middle", ...(c.alignment ?? {}) };
@@ -61,7 +61,7 @@ function body(row: ExcelJS.Row, i: number) {
   });
 }
 
-function totalRow(row: ExcelJS.Row) {
+export function totalRow(row: ExcelJS.Row) {
   row.height = 22;
   row.eachCell({ includeEmpty: true }, (c) => {
     c.font = { bold: true, color: { argb: MAROON_DARK } };

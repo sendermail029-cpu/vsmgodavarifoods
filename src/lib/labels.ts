@@ -1,5 +1,7 @@
 import "server-only";
-import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage, type RGB } from "pdf-lib";
+import { readFile } from "node:fs/promises";
+import path from "node:path";
+import { PDFDocument, StandardFonts, concatTransformationMatrix, popGraphicsState, pushGraphicsState, rgb, type PDFFont, type PDFPage, type RGB } from "pdf-lib";
 import { db } from "./db";
 import type { Order } from "./orders";
 import type { Settings } from "./settings";
@@ -44,13 +46,35 @@ async function newDoc(title: string) {
 }
 
 /* ------------------------------------------------------------------ */
-/* 1) Shipping label — 4 x 6 inch (standard courier label), one per order */
+/* 1) Shipping label — 4 x 6 inch design, printed 4 per A4 sheet (2 x 2) */
 /* ------------------------------------------------------------------ */
+/** Our round logo (PNG), or null if the file can't be read. */
+async function loadLogo(doc: PDFDocument) {
+  try { return await doc.embedPng(await readFile(path.join(process.cwd(), "public", "brand", "logo-mark-1024.png"))); } catch { return null; }
+}
+
 export async function shippingLabelsPdf(orders: Order[], s: Settings) {
   const { doc, f } = await newDoc("Shipping labels");
+  const logo = await loadLogo(doc);
   const W = 288, H = 432, M = 14;
-  for (const o of orders) {
-    const p = doc.addPage([W, H]);
+  // A4 sheet, 2 x 2 labels, scaled to fit, with dashed cut lines
+  const PW = 595.28, PH = 841.89, m = 10;
+  const cw = (PW - 2 * m) / 2, ch = (PH - 2 * m) / 2;
+  const scale = Math.min((cw - 8) / W, (ch - 8) / H);
+  const cut = rgb(0.6, 0.6, 0.6);
+  let p: PDFPage = null!;
+  orders.forEach((o, n) => {
+    const slot = n % 4;
+    if (slot === 0) {
+      p = doc.addPage([PW, PH]);
+      p.drawLine({ start: { x: PW / 2, y: m }, end: { x: PW / 2, y: PH - m }, thickness: 0.5, color: cut, dashArray: [4, 3] });
+      p.drawLine({ start: { x: m, y: PH / 2 }, end: { x: PW - m, y: PH / 2 }, thickness: 0.5, color: cut, dashArray: [4, 3] });
+    }
+    const col = slot % 2, row = Math.floor(slot / 2);
+    const ox = m + col * cw + (cw - W * scale) / 2, oy = PH - m - (row + 1) * ch + (ch - H * scale) / 2;
+    // draw this label in its own 288 x 432 coordinate space
+    p.pushOperators(pushGraphicsState(), concatTransformationMatrix(scale, 0, 0, scale, ox, oy));
+
     p.drawRectangle({ x: 6, y: 6, width: W - 12, height: H - 12, borderColor: INK, borderWidth: 1.2 });
     // header
     p.drawRectangle({ x: 6, y: H - 52, width: W - 12, height: 46, color: MAROON });
@@ -79,16 +103,22 @@ export async function shippingLabelsPdf(orders: Order[], s: Settings) {
     txt(p, f, `CONTENTS (${o.items.reduce((t, i) => t + i.qty, 0)} items, approx ${(grams / 1000).toFixed(2)} kg food)`, M, y, 7.5, { bold: true, color: GOLD }); y -= 12;
     for (const i of o.items.slice(0, 6)) { txt(p, f, `${i.qty} x ${i.name} - ${i.label}`, M, y, 8.5, { maxW: W - 2 * M }); y -= 11; }
     if (o.items.length > 6) { txt(p, f, `+ ${o.items.length - 6} more item(s)`, M, y, 8, { color: GREY }); y -= 11; }
-    txt(p, f, "FRAGILE - GLASS JARS - THIS SIDE UP", W / 2, Math.max(y - 6, 92), 9, { bold: true, color: RED, align: "center" });
+    const fy0 = Math.max(y - 6, 92);
+    txt(p, f, "FRAGILE - HANDLE WITH CARE - THIS SIDE UP", W / 2, fy0, 9, { bold: true, color: RED, align: "center" });
 
-    // FROM
+    // FROM (logo on the right of this box)
     p.drawLine({ start: { x: 6, y: 82 }, end: { x: W - 6, y: 82 }, thickness: 0.8, color: INK });
+    const LS = 66, fromW = W - 2 * M - (logo ? LS + 6 : 0);
+    if (logo) p.drawImage(logo, { x: W - 9 - LS, y: 6 + (76 - LS) / 2, width: LS, height: LS });
     txt(p, f, "FROM / RETURN TO", M, 70, 7, { bold: true, color: GOLD });
-    txt(p, f, s.store_name || "VSM Godavari Foods", M, 58, 9, { bold: true });
+    txt(p, f, s.store_name || "VSM Godavari Foods", M, 58, 9, { bold: true, maxW: fromW });
     let fy = 47;
-    for (const line of wrap(f.r, s.address, 7.5, W - 2 * M, 2)) { txt(p, f, line, M, fy, 7.5); fy -= 9; }
-    txt(p, f, `Ph: +91 ${s.phone}${s.fssai_license ? `   FSSAI: ${s.fssai_license}` : ""}`, M, fy, 7.5);
-  }
+    for (const line of wrap(f.r, s.address, 7.5, fromW, 3)) { txt(p, f, line, M, fy, 7.5); fy -= 9; }
+    txt(p, f, `Ph: +91 ${s.phone}${s.fssai_license ? `   FSSAI: ${s.fssai_license}` : ""}`, M, fy, 7.5, { maxW: fromW });
+
+    p.pushOperators(popGraphicsState());
+  });
+  if (!orders.length) doc.addPage([PW, PH]);
   return doc.save();
 }
 
@@ -113,6 +143,8 @@ function bestBefore(packed: Date, life: ShelfLife) {
 
 export async function jarStickersPdf(stickers: JarSticker[], s: Settings, packedOn = new Date()) {
   const { doc, f } = await newDoc("Jar stickers");
+  const logo = await loadLogo(doc);
+  const BAND = logo ? 80 : 34;
   const PW = 595.28, PH = 841.89, cols = 2, rows = 6, mx = 22, my = 28, gap = 10;
   const w = (PW - 2 * mx - gap) / cols, h = (PH - 2 * my - gap * (rows - 1)) / rows;
   let page: PDFPage | null = null;
@@ -123,25 +155,33 @@ export async function jarStickersPdf(stickers: JarSticker[], s: Settings, packed
     const x = mx + (slot % cols) * (w + gap), y = PH - my - Math.floor(slot / cols) * (h + gap) - h;
     // border (cut line) + maroon side band
     p.drawRectangle({ x, y, width: w, height: h, borderColor: rgb(0.8, 0.75, 0.68), borderWidth: 0.6, borderDashArray: [3, 2] });
-    p.drawRectangle({ x, y, width: 34, height: h, color: MAROON });
-    p.drawRectangle({ x: 34 + x, y, width: 2.5, height: h, color: GOLD });
-    p.drawText("VSM", { x: x + 9, y: y + h / 2 + 8, size: 10, font: f.b, color: WHITE });
-    p.drawText("GODAVARI", { x: x + 4.5, y: y + h / 2 - 4, size: 5.2, font: f.b, color: rgb(0.98, 0.86, 0.55) });
-    p.drawText("FOODS", { x: x + 9, y: y + h / 2 - 11, size: 5.2, font: f.b, color: rgb(0.98, 0.86, 0.55) });
+    p.drawRectangle({ x, y, width: BAND, height: h, color: MAROON });
+    p.drawRectangle({ x: BAND + x, y, width: 2.5, height: h, color: GOLD });
+    if (logo) {
+      // big logo on a cream disc with a gold ring, centred in the maroon band
+      const cx = x + BAND / 2, cy = y + h / 2, ls = BAND - 8;
+      p.drawCircle({ x: cx, y: cy, size: ls / 2 + 2.5, color: rgb(0.99, 0.96, 0.88), borderColor: GOLD, borderWidth: 1.6 });
+      p.drawImage(logo, { x: cx - ls / 2, y: cy - ls / 2, width: ls, height: ls });
+    } else {
+      p.drawText("VSM", { x: x + 9, y: y + h / 2 + 8, size: 10, font: f.b, color: WHITE });
+      p.drawText("GODAVARI", { x: x + 4.5, y: y + h / 2 - 4, size: 5.2, font: f.b, color: rgb(0.98, 0.86, 0.55) });
+      p.drawText("FOODS", { x: x + 9, y: y + h / 2 - 11, size: 5.2, font: f.b, color: rgb(0.98, 0.86, 0.55) });
+    }
 
-    const L = x + 44, R = x + w - 8, inner = R - L;
+    const L = x + BAND + 10, R = x + w - 8, inner = R - L;
     vegMark(p, R - 11, y + h - 17, 10, st.nonVeg);
     txt(p, f, st.name, L, y + h - 18, 12, { bold: true, color: MAROON, maxW: inner - 16 });
-    txt(p, f, `Net wt: ${st.pack}`, L, y + h - 31, 8.5, { bold: true });
-    txt(p, f, `MRP ${rs(st.mrp && st.mrp > st.price ? st.mrp : st.price)} (incl. of all taxes)`, R, y + h - 31, 7.5, { bold: true, align: "right" });
-    let iy = y + h - 43;
-    if (st.ingredients) for (const line of wrap(f.r, `Ingredients: ${st.ingredients}`, 6.2, inner, 2)) { txt(p, f, line, L, iy, 6.2, { color: GREY }); iy -= 7.5; }
+    txt(p, f, `Net wt: ${st.pack}`, L, y + h - 32, 9, { bold: true });
+    txt(p, f, `MRP ${rs(st.mrp && st.mrp > st.price ? st.mrp : st.price)}`, R, y + h - 32, 9, { bold: true, align: "right" });
+    txt(p, f, "(incl. of all taxes)", R, y + h - 39, 5.2, { color: GREY, align: "right" });
+    let iy = y + h - 49;
+    if (st.ingredients) for (const line of wrap(f.r, `Ingredients: ${st.ingredients}`, 6.2, inner, 3)) { txt(p, f, line, L, iy, 6.2, { color: GREY }); iy -= 7.5; }
     const best = st.shelfDays ? bestBefore(packedOn, st.shelfDays) : null;
-    txt(p, f, `Packed on: ${fmtDate(packedOn)}`, L, y + 26, 7.5, { bold: true });
-    txt(p, f, best ? `Best before: ${fmtDate(best)}` : `Best before: ${st.shelf || "see pack"}`, R, y + 26, 7.5, { bold: true, color: RED, align: "right", maxW: inner / 2 });
-    txt(p, f, "Use a dry spoon. Store in a cool, dry place.", L, y + 16, 6.2, { color: GREY });
-    txt(p, f, `${s.store_name || "VSM Godavari Foods"}, Velpuru, W. Godavari  |  +91 ${s.phone}${s.fssai_license ? `  |  FSSAI ${s.fssai_license}` : ""}`, L, y + 7, 5.6, { color: GREY, maxW: inner - (st.orderCode ? 50 : 0) });
-    if (st.orderCode) txt(p, f, st.orderCode, R, y + 7, 5.6, { bold: true, align: "right" });
+    txt(p, f, `Packed on: ${fmtDate(packedOn)}`, L, y + 26, 7.5, { bold: true, maxW: inner / 2 - 4 });
+    txt(p, f, best ? `Best before: ${fmtDate(best)}` : `Best before: ${st.shelf || "see pack"}`, R, y + 26, 7.5, { bold: true, color: RED, align: "right", maxW: inner / 2 - 4 });
+    txt(p, f, "Use a dry spoon. Store in a cool, dry place.", L, y + 16, 6.2, { color: GREY, maxW: inner - (st.orderCode ? 52 : 0) });
+    if (st.orderCode) txt(p, f, st.orderCode, R, y + 16, 6, { bold: true, align: "right" });
+    txt(p, f, `${s.store_name || "VSM Godavari Foods"}, Velpuru, W. Godavari  |  +91 ${s.phone}${s.fssai_license ? `  |  FSSAI ${s.fssai_license}` : ""}`, L, y + 7, 5.6, { color: GREY, maxW: inner });
   });
   if (!stickers.length) doc.addPage([PW, PH]);
   return doc.save();

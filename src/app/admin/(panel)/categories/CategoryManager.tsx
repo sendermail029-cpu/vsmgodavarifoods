@@ -80,8 +80,8 @@ export function CategoryManager({ cats }: { cats: Cat[] }) {
                 <Link href={`/shop/${c.slug}`} target="_blank" className="flex w-fit items-center gap-1 truncate font-mono text-xs text-ink/50 hover:text-maroon-700">/shop/{c.slug} <ExternalLink className="h-3 w-3" /></Link>
               </div>
               {c.description && <p className="line-clamp-2 text-xs text-ink/60">{c.description}</p>}
-              <div className="mt-auto flex items-center gap-1 border-t border-maroon-700/10 pt-3">
-                <button className="btn-ghost flex-1 py-2 text-xs" onClick={() => open(c)}><Pencil className="h-3.5 w-3.5" /> Edit</button>
+              <div className="mt-auto flex items-center gap-0.5 border-t border-maroon-700/10 pt-3">
+                <button className="btn-ghost min-w-0 flex-1 px-3 py-2 text-xs" onClick={() => open(c)}><Pencil className="h-3.5 w-3.5" /> Edit</button>
                 <button className="rounded-lg p-2 hover:bg-cream disabled:opacity-30" disabled={pending || i === 0} onClick={() => move(i, -1)} aria-label="Move earlier" title="Move earlier"><ArrowUp className="h-4 w-4" /></button>
                 <button className="rounded-lg p-2 hover:bg-cream disabled:opacity-30" disabled={pending || i === cats.length - 1} onClick={() => move(i, 1)} aria-label="Move later" title="Move later"><ArrowDown className="h-4 w-4" /></button>
                 <button className="rounded-lg p-2 hover:bg-cream" disabled={pending} onClick={() => quick(c, { active: !c.active }, c.active ? "Hidden from website" : "Visible on website")} aria-label={c.active ? "Hide" : "Show"} title={c.active ? "Hide from website" : "Show on website"}>

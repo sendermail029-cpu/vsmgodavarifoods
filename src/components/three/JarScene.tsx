@@ -278,6 +278,7 @@ function Vessel({ type, poseAt, slots, stage, lid, fillColor, label, progress, h
 /* ------------------------------------------------------------------ */
 /* Scene                                                                */
 /* ------------------------------------------------------------------ */
+
 function Rig({ idle }: { idle: boolean }) {
   const { camera, pointer, size } = useThree();
   const portrait = size.width / size.height < 0.9;

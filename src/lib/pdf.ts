@@ -5,20 +5,20 @@ import type { SalesReport } from "./reports";
 import type { Settings } from "./settings";
 
 /* A4 portrait, points */
-const W = 595.28, H = 841.89, M = 40;
-const MAROON = rgb(0.478, 0.11, 0.11), GOLD = rgb(0.72, 0.54, 0.18), INK = rgb(0.16, 0.07, 0.06), GREY = rgb(0.45, 0.42, 0.4), LINE = rgb(0.88, 0.84, 0.78), CREAM = rgb(0.99, 0.97, 0.93);
+export const W = 595.28, H = 841.89, M = 40;
+export const MAROON = rgb(0.478, 0.11, 0.11), GOLD = rgb(0.72, 0.54, 0.18), INK = rgb(0.16, 0.07, 0.06), GREY = rgb(0.45, 0.42, 0.4), LINE = rgb(0.88, 0.84, 0.78), CREAM = rgb(0.99, 0.97, 0.93);
 
 /** Standard PDF fonts only know Western characters: drop anything else (e.g. Telugu) so the PDF never fails. */
-const safe = (s: unknown) => String(s ?? "").replace(/₹/g, "Rs.").replace(/[–—]/g, "-").replace(/[‘’]/g, "'").replace(/[“”]/g, '"').replace(/[^\x20-\x7E]/g, "").replace(/\s+/g, " ").trim();
-const money = (paise: number) => `Rs. ${(paise / 100).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+export const safe = (s: unknown) => String(s ?? "").replace(/₹/g, "Rs.").replace(/[–—]/g, "-").replace(/[‘’]/g, "'").replace(/[“”]/g, '"').replace(/[^\x20-\x7E]/g, "").replace(/\s+/g, " ").trim();
+export const money = (paise: number) => `Rs. ${(paise / 100).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const istDate = (utc: string, withTime = true) =>
   new Date(utc.replace(" ", "T") + "Z").toLocaleString("en-IN", { timeZone: "Asia/Kolkata", day: "2-digit", month: "short", year: "numeric", ...(withTime ? { hour: "2-digit", minute: "2-digit" } : {}) });
-const niceDay = (d: string) => new Date(d + "T00:00:00Z").toLocaleDateString("en-IN", { timeZone: "UTC", day: "2-digit", month: "short", year: "numeric", weekday: "short" });
+export const niceDay = (d: string) => new Date(d + "T00:00:00Z").toLocaleDateString("en-IN", { timeZone: "UTC", day: "2-digit", month: "short", year: "numeric", weekday: "short" });
 const METHOD: Record<string, string> = { upi_qr: "UPI", phonepe: "Card / PhonePe", cod: "Cash on Delivery" };
 
-type Ctx = { doc: PDFDocument; page: PDFPage; y: number; f: PDFFont; b: PDFFont };
+export type Ctx = { doc: PDFDocument; page: PDFPage; y: number; f: PDFFont; b: PDFFont };
 
-function text(c: Ctx, s: string, x: number, y: number, size = 9, bold = false, color = INK, align: "left" | "right" | "center" = "left") {
+export function text(c: Ctx, s: string, x: number, y: number, size = 9, bold = false, color = INK, align: "left" | "right" | "center" = "left") {
   const t = safe(s), font = bold ? c.b : c.f, w = font.widthOfTextAtSize(t, size);
   c.page.drawText(t, { x: align === "right" ? x - w : align === "center" ? x - w / 2 : x, y, size, font, color });
 }
@@ -34,7 +34,7 @@ function wrap(font: PDFFont, s: string, size: number, width: number) {
   return lines.length ? lines : [""];
 }
 
-function header(c: Ctx, s: Settings, title: string, sub: string) {
+export function header(c: Ctx, s: Settings, title: string, sub: string) {
   c.page.drawRectangle({ x: 0, y: H - 92, width: W, height: 92, color: MAROON });
   c.page.drawRectangle({ x: 0, y: H - 96, width: W, height: 4, color: GOLD });
   text(c, s.store_name || "VSM Godavari Foods", M, H - 42, 20, true, rgb(1, 1, 1));
@@ -45,7 +45,7 @@ function header(c: Ctx, s: Settings, title: string, sub: string) {
   c.y = H - 120;
 }
 
-function footer(c: Ctx, note: string) {
+export function footer(c: Ctx, note: string) {
   c.page.drawLine({ start: { x: M, y: 42 }, end: { x: W - M, y: 42 }, thickness: 0.6, color: LINE });
   text(c, note, M, 30, 7.5, false, GREY);
   text(c, `Page ${c.doc.getPageCount()}`, W - M, 30, 7.5, false, GREY, "right");
@@ -53,7 +53,7 @@ function footer(c: Ctx, note: string) {
 
 type Col = { label: string; w: number; align?: "left" | "right" | "center" };
 /** Draws a table, adding pages as needed. Returns nothing; advances c.y. */
-function table(c: Ctx, cols: Col[], rows: string[][], opts: { onNewPage: () => void; bold?: (i: number) => boolean; size?: number }) {
+export function table(c: Ctx, cols: Col[], rows: string[][], opts: { onNewPage: () => void; bold?: (i: number) => boolean; size?: number }) {
   const size = opts.size ?? 8.5, rowH = size + 8;
   const drawHead = () => {
     c.page.drawRectangle({ x: M, y: c.y - rowH + 4, width: W - 2 * M, height: rowH, color: CREAM });
@@ -77,7 +77,7 @@ function table(c: Ctx, cols: Col[], rows: string[][], opts: { onNewPage: () => v
   });
 }
 
-async function newDoc() {
+export async function newDoc() {
   const doc = await PDFDocument.create();
   const f = await doc.embedFont(StandardFonts.Helvetica), b = await doc.embedFont(StandardFonts.HelveticaBold);
   return { doc, f, b };

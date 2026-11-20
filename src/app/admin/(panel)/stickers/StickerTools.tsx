@@ -52,7 +52,7 @@ export function StickerTools({ toPack, recent, variants, today }: { toPack: Row[
         <p className="font-semibold">{sel.length} {sel.length === 1 ? "order" : "orders"} selected · {jarsSelected} jars</p>
         <div className="ml-auto flex flex-wrap gap-2">
           <button type="button" onClick={() => setSel(sel.length ? [] : toPack.map((o) => o.id))} className="rounded-full px-4 py-2 text-sm font-semibold ring-1 ring-gold-light/50 hover:bg-white/10">{sel.length ? "Clear selection" : "Select all to pack"}</button>
-          <a aria-disabled={!sel.length} href={sel.length ? `/api/admin/stickers?type=shipping&ids=${ids}` : undefined} className={`btn-gold ${sel.length ? "" : "pointer-events-none opacity-50"}`}><Truck className="h-4 w-4" /> Parcel labels (4×6)</a>
+          <a aria-disabled={!sel.length} href={sel.length ? `/api/admin/stickers?type=shipping&ids=${ids}` : undefined} className={`btn-gold ${sel.length ? "" : "pointer-events-none opacity-50"}`}><Truck className="h-4 w-4" /> Parcel labels (4 per A4)</a>
           <a aria-disabled={!sel.length} href={sel.length ? `/api/admin/stickers?type=jars&ids=${ids}` : undefined} className={`btn-gold ${sel.length ? "" : "pointer-events-none opacity-50"}`}><Tag className="h-4 w-4" /> Jar stickers (A4)</a>
         </div>
       </div>

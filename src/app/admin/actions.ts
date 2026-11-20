@@ -534,3 +534,65 @@ export async function setAdminRole(id: number, role: "owner" | "partner"): Promi
   revalidatePath("/admin/account");
   return { ok: true, message: role === "owner" ? "They can now manage logins too." : "Changed to partner." };
 }
+
+/* ---------------- investors / money book ---------------- */
+const memberSchema = z.object({
+  id: z.number().int().positive().optional(),
+  name: z.string().trim().min(2, "Enter the member's name").max(60),
+  phone: z.string().trim().max(20).optional().default(""),
+  note: z.string().trim().max(200).optional().default(""),
+});
+
+export async function saveInvestor(input: unknown): Promise<Result> {
+  await requireAdmin();
+  const p = memberSchema.safeParse(input);
+  if (!p.success) return { ok: false, error: p.error.issues[0].message };
+  const d = p.data;
+  const c = await db();
+  if (d.id) await c.execute({ sql: "UPDATE investors SET name=?, phone=?, note=? WHERE id=?", args: [d.name, d.phone || null, d.note || null, d.id] });
+  else await c.execute({ sql: "INSERT INTO investors(name, phone, note) VALUES (?,?,?)", args: [d.name, d.phone || null, d.note || null] });
+  revalidatePath("/admin/investors");
+  return { ok: true, message: d.id ? "Member updated" : "Member added" };
+}
+
+export async function deleteInvestor(id: number): Promise<Result> {
+  await requireAdmin();
+  const c = await db();
+  const { rows } = await c.execute({ sql: "SELECT COUNT(*) n FROM money_entries WHERE investor_id = ?", args: [id] });
+  if (Number(rows[0].n) > 0) return { ok: false, error: "This member has money entries. Delete those entries first." };
+  await c.execute({ sql: "DELETE FROM investors WHERE id = ?", args: [id] });
+  revalidatePath("/admin/investors");
+  return { ok: true, message: "Member removed" };
+}
+
+const moneySchema = z.object({
+  kind: z.enum(["invest", "withdraw", "expense"]),
+  amount: z.number().positive("Enter an amount greater than 0").max(100_000_000),
+  investor_id: z.number().int().positive().nullable().optional(),
+  category: z.string().trim().max(60).optional().default(""),
+  note: z.string().trim().max(200).optional().default(""),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Pick a date"),
+});
+
+export async function addMoneyEntry(input: unknown): Promise<Result> {
+  const admin = await requireAdmin();
+  const p = moneySchema.safeParse(input);
+  if (!p.success) return { ok: false, error: p.error.issues[0].message };
+  const d = p.data;
+  if (d.kind !== "expense" && !d.investor_id) return { ok: false, error: "Choose which member" };
+  const c = await db();
+  await c.execute({
+    sql: "INSERT INTO money_entries(investor_id, kind, amount, category, note, entry_date, by_name) VALUES (?,?,?,?,?,?,?)",
+    args: [d.investor_id ?? null, d.kind, Math.round(d.amount * 100), d.kind === "expense" ? d.category || "Other" : null, d.note || null, d.date, admin.name],
+  });
+  revalidatePath("/admin/investors");
+  return { ok: true, message: d.kind === "invest" ? "Investment added" : d.kind === "withdraw" ? "Withdrawal added" : "Expense added" };
+}
+
+export async function deleteMoneyEntry(id: number): Promise<Result> {
+  await requireAdmin();
+  const c = await db();
+  await c.execute({ sql: "DELETE FROM money_entries WHERE id = ?", args: [id] });
+  revalidatePath("/admin/investors");
+  return { ok: true, message: "Entry deleted" };
+}

@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 
 /**
  * Admin-only packing stickers (PDF):
- *   ?type=shipping&ids=1,2      shipping labels (4x6 in) for orders
+ *   ?type=shipping&ids=1,2      shipping labels for orders, 4 per A4 sheet
  *   ?type=jars&ids=1,2          one jar sticker per item in the orders
  *   ?type=shipping|jars&ids=topack   all orders waiting to be packed
  *   ?type=product&variant=5&count=12&date=2026-11-14   stickers for jars packed in advance
