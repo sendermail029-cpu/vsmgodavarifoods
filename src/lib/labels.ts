@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { PDFDocument, StandardFonts, concatTransformationMatrix, popGraphicsState, pushGraphicsState, rgb, type PDFFont, type PDFPage, type RGB } from "pdf-lib";
 import { db } from "./db";
+import { SITE_URL } from "./format";
 import type { Order } from "./orders";
 import type { Settings } from "./settings";
 
@@ -49,8 +50,15 @@ async function newDoc(title: string) {
 /* 1) Shipping label — 4 x 6 inch design, printed 4 per A4 sheet (2 x 2) */
 /* ------------------------------------------------------------------ */
 /** Our round logo (PNG), or null if the file can't be read. */
+const LOGO = "brand/logo-mark-1024.png";
+/** Our round logo: read from /public, or (on serverless hosts where /public isn't on disk) fetched from the site itself. */
 async function loadLogo(doc: PDFDocument) {
-  try { return await doc.embedPng(await readFile(path.join(process.cwd(), "public", "brand", "logo-mark-1024.png"))); } catch { return null; }
+  try { return await doc.embedPng(await readFile(path.join(process.cwd(), "public", LOGO))); } catch {}
+  try {
+    const res = await fetch(`${SITE_URL}/${LOGO}`, { signal: AbortSignal.timeout(5000) });
+    if (res.ok) return await doc.embedPng(new Uint8Array(await res.arrayBuffer()));
+  } catch {}
+  return null;
 }
 
 export async function shippingLabelsPdf(orders: Order[], s: Settings) {
