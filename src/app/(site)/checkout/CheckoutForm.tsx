@@ -184,7 +184,7 @@ export function CheckoutForm({ options, whatsapp, international }: { options: Op
             <div className="flex justify-between border-t border-maroon-700/10 pt-2 text-lg"><dt className="font-bold">Total</dt><dd className="font-black text-maroon-700">{q ? rupees(total) : "…"}</dd></div>
           </dl>
           <label className="mt-4 flex items-start gap-2 text-sm">
-            <input type="checkbox" name="terms" className="mt-1 accent-maroon-700" required />
+            <input type="checkbox" name="terms" className="mt-1 accent-maroon-700" defaultChecked required />
             <span>I agree to the <Link href="/terms-and-conditions" target="_blank" className="text-maroon-700 underline">Terms</Link>, <Link href="/privacy-policy" target="_blank" className="text-maroon-700 underline">Privacy</Link> and <Link href="/refund-policy" target="_blank" className="text-maroon-700 underline">Refund policy</Link>.</span>
           </label>
           {fields.acceptTerms && <p className="mt-1 text-xs text-chilli">{fields.acceptTerms}</p>}
