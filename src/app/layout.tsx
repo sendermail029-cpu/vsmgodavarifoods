@@ -9,7 +9,7 @@ export const metadata: Metadata = {
     template: "%s | VSM Godavari Foods",
   },
   description:
-    "Buy homemade Godavari-style chicken pickle, mutton pickle, avakaya, gongura, sunnundalu, laddus and traditional snacks online. No preservatives, no added colours. All-India delivery, free above ₹1,500.",
+    "Buy homemade Godavari-style chicken pickle, mutton pickle, avakaya, gongura, sunnundalu, laddus and traditional snacks online. No preservatives, no added colours. All-India delivery, free above ₹1,499.",
   keywords: [
     "chicken pickle online", "andhra pickles", "godavari pickles", "avakaya", "gongura pickle", "mutton pickle",
     "prawn pickle", "sunnundalu", "putharekulu", "homemade pickles", "west godavari foods", "tanuku pickles", "VSM Godavari Foods",
