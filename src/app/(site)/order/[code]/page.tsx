@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { BadgeCheck, CheckCircle2, Clock, Hourglass, PackageCheck, Truck, XCircle } from "lucide-react";
+import { BadgeCheck, CheckCircle2, Clock, Hourglass, PackageCheck, Phone, ShieldCheck, Truck, XCircle } from "lucide-react";
 import { expireUnpaidOrders, getOrderForCustomer, PAYMENT_WINDOW_HOURS } from "@/lib/orders";
 import { refreshPhonePeStatus, upiQrFor } from "@/lib/payments";
 import { getSettings } from "@/lib/settings";
 import { rupees } from "@/lib/format";
-import { ClearCartOnce, CopyText, PaidButton, PaymentWatcher } from "./OrderClient";
+import { ClearCartOnce, CopyText, PaidButton, PaymentWatcher, ProofUpload } from "./OrderClient";
 import { WhatsAppIcon } from "@/components/brand/SocialIcons";
 
 export const metadata: Metadata = { title: "Your order", robots: { index: false, follow: false } };
@@ -130,14 +130,42 @@ export default async function OrderPage({ params, searchParams }: { params: Prom
       )}
 
       {verifying && (
-        <section className="mt-8 rounded-3xl bg-amber-50 p-6 text-center ring-1 ring-amber-200 sm:p-8">
-          <Hourglass className="mx-auto h-10 w-10 text-amber-600" />
-          <h2 className="mt-3 font-display text-2xl font-bold text-amber-900">Thank you! Confirming your payment…</h2>
-          <p className="mx-auto mt-2 max-w-lg text-sm text-amber-900/80">Thank you! We&apos;re checking that your payment of <b>{rupees(order.total)}</b> has reached us{order.utr ? <> (reference <b className="font-mono">{order.utr}</b>)</> : null} — usually within a few minutes during working hours. <b>This page updates by itself</b>, no need to refresh.</p>
-          <a href={paidWa} target="_blank" rel="noopener noreferrer" className="btn mt-5 bg-[#25D366] px-6 py-3 text-base text-white shadow-lg hover:opacity-90">
-            <WhatsAppIcon className="h-5 w-5" /> Send payment screenshot on WhatsApp
-          </a>
-          <p className="mt-2 text-xs text-amber-900/60">Sharing the screenshot helps us confirm your order faster.</p>
+        <section className="mt-8 overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-maroon-700/10">
+          {/* progress: what's done and what's left */}
+          <ol className="grid grid-cols-3 gap-2 bg-cream/70 px-4 py-5 text-center text-xs font-semibold sm:text-sm">
+            {[
+              { t: "Order placed", done: true },
+              { t: "Payment sent", done: true },
+              { t: "We confirm", done: false },
+            ].map((st, i) => (
+              <li key={st.t} className="flex flex-col items-center gap-2">
+                <span className={`grid h-10 w-10 place-items-center rounded-full ${st.done ? "bg-emerald-500 text-white" : "bg-amber-100 text-amber-700 ring-2 ring-amber-300"}`}>
+                  {st.done ? <CheckCircle2 className="h-5 w-5" /> : <Hourglass className="h-5 w-5 animate-pulse" />}
+                </span>
+                <span className={st.done ? "text-emerald-800" : "text-amber-800"}>{i + 1}. {st.t}</span>
+              </li>
+            ))}
+          </ol>
+
+          <div className="p-6 text-center sm:p-8">
+            <h2 className="font-display text-2xl font-bold text-maroon-700">Thank you! Your order is saved</h2>
+            <p className="mx-auto mt-2 max-w-lg text-sm text-ink/70">We&apos;re matching your payment of <b>{rupees(order.total)}</b> with our bank{order.utr ? <> (reference <b className="font-mono">{order.utr}</b>)</> : null}. This usually takes a few minutes during working hours — <b>this page updates by itself</b>.</p>
+
+            <div className="mx-auto max-w-md">
+              {!order.payment_proof && <p className="mt-6 text-sm font-semibold text-maroon-700">To confirm faster, upload the screenshot of your payment:</p>}
+              <ProofUpload code={order.code} token={sp.t ?? ""} existing={order.payment_proof} />
+              <a href={paidWa} target="_blank" rel="noopener noreferrer" className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-[#128C7E] hover:underline">
+                <WhatsAppIcon className="h-4 w-4" /> Or send it to us on WhatsApp
+              </a>
+            </div>
+
+            {/* reassurance */}
+            <ul className="mx-auto mt-7 grid max-w-2xl gap-3 text-left text-sm sm:grid-cols-3">
+              <li className="rounded-2xl bg-emerald-50 p-4 ring-1 ring-emerald-100"><ShieldCheck className="h-5 w-5 text-emerald-600" /><b className="mt-2 block text-emerald-900">Your money is safe</b><span className="text-xs text-emerald-900/70">If we can&apos;t match your payment, we refund the full amount.</span></li>
+              <li className="rounded-2xl bg-emerald-50 p-4 ring-1 ring-emerald-100"><PackageCheck className="h-5 w-5 text-emerald-600" /><b className="mt-2 block text-emerald-900">Items reserved for you</b><span className="text-xs text-emerald-900/70">Your jars are kept aside while we confirm.</span></li>
+              <li className="rounded-2xl bg-emerald-50 p-4 ring-1 ring-emerald-100"><Phone className="h-5 w-5 text-emerald-600" /><b className="mt-2 block text-emerald-900">Talk to us anytime</b><span className="text-xs text-emerald-900/70">Call <a href={`tel:+91${s.phone}`} className="font-semibold underline">+91 {s.phone}</a></span></li>
+            </ul>
+          </div>
         </section>
       )}
 
@@ -187,7 +215,7 @@ export default async function OrderPage({ params, searchParams }: { params: Prom
           <h2 className="font-display text-xl font-bold">Delivery to</h2>
           <p className="mt-3 font-semibold">{order.customer_name}</p>
           <p className="text-ink/70">{order.address}, {order.city}, {order.state} – {order.pincode}{order.country && order.country !== "India" ? `, ${order.country}` : ""}</p>
-          <p className="text-ink/70">+91 {order.phone}</p>
+          <p className="text-ink/70">{order.phone.startsWith("+") ? order.phone : `+91 ${order.phone}`}</p>
           <p className="mt-4 text-ink/70">Payment: <b>{order.payment_method === "cod" ? "Cash on Delivery" : order.payment_method === "phonepe" ? "PhonePe / UPI" : "UPI"}</b></p>
           <a className="btn-gold mt-5" target="_blank" rel="noopener noreferrer" href={`https://wa.me/${s.whatsapp}?text=${encodeURIComponent(`Hello VSM Godavari Foods, about my order ${order.code}`)}`}>Questions? WhatsApp us</a>
         </div>

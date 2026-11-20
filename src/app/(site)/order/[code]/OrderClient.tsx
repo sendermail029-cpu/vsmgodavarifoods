@@ -1,9 +1,9 @@
 "use client";
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Check, Copy, Loader2 } from "lucide-react";
+import { Camera, Check, Copy, ImageUp, Loader2, RefreshCw } from "lucide-react";
 import { useCart } from "@/components/cart/CartProvider";
-import { claimPaidAction, submitUtrAction } from "./actions";
+import { claimPaidAction, submitUtrAction, uploadPaymentProofAction } from "./actions";
 
 export function ClearCartOnce({ when }: { when: boolean }) {
   const { clear, ready } = useCart();
@@ -102,11 +102,9 @@ export function PaidButton({ code, token, whatsappUrl }: { code: string; token: 
     document.addEventListener("visibilitychange", onVis);
     return () => document.removeEventListener("visibilitychange", onVis);
   }, []);
-  const confirm = () => {
-    // open the shop's WhatsApp chat with a ready message so the customer can send the payment screenshot
-    if (whatsappUrl) window.open(whatsappUrl, "_blank", "noopener");
-    send();
-  };
+  // stay on this page: the next screen asks for the screenshot right here (WhatsApp is offered there as a backup)
+  void whatsappUrl;
+  const confirm = () => send();
   const send = () => start(async () => {
     const r = await claimPaidAction(code, token, utr);
     if (!r.ok) { setErr(r.error ?? "Error"); return; }
@@ -132,6 +130,74 @@ export function PaidButton({ code, token, whatsappUrl }: { code: string; token: 
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+/** Shrink a phone screenshot to max 1400px WebP/JPEG in the browser so it uploads fast on mobile data. */
+async function shrink(file: File) {
+  if (!/^image\//.test(file.type)) throw new Error("Please choose a photo of the payment screen.");
+  if (file.size > 20 * 1024 * 1024) throw new Error("This photo is too large. Please choose the screenshot.");
+  const bmp = await createImageBitmap(file);
+  const s = Math.min(1, 1400 / Math.max(bmp.width, bmp.height));
+  const c = document.createElement("canvas");
+  c.width = Math.round(bmp.width * s); c.height = Math.round(bmp.height * s);
+  c.getContext("2d")!.drawImage(bmp, 0, 0, c.width, c.height);
+  let q = 0.85, out = c.toDataURL("image/webp", q);
+  if (!out.startsWith("data:image/webp")) out = c.toDataURL("image/jpeg", 0.8);
+  while (out.length > 1_400_000 && q > 0.35) { q -= 0.1; out = c.toDataURL(out.startsWith("data:image/webp") ? "image/webp" : "image/jpeg", q); }
+  return out;
+}
+
+/**
+ * One-tap "upload payment screenshot": pick from gallery (or take a photo), it is compressed and sent right away.
+ * Shows the uploaded screenshot with a green tick so the customer knows we have it.
+ */
+export function ProofUpload({ code, token, existing }: { code: string; token: string; existing: string | null }) {
+  const [preview, setPreview] = useState<string | null>(existing);
+  const [done, setDone] = useState(!!existing);
+  const [err, setErr] = useState<string | null>(null);
+  const [pending, start] = useTransition();
+  const router = useRouter();
+  const pick = (file: File | undefined) => {
+    if (!file) return;
+    setErr(null);
+    start(async () => {
+      try {
+        const data = await shrink(file);
+        setPreview(data);
+        const r = await uploadPaymentProofAction(code, token, data);
+        if (!r.ok) { setErr(r.error ?? "Upload failed"); setDone(false); return; }
+        setDone(true); router.refresh();
+      } catch (e) { setErr(e instanceof Error ? e.message : "Upload failed"); }
+    });
+  };
+  return (
+    <div className="mt-5 w-full">
+      <label className={`group relative flex cursor-pointer flex-col items-center gap-3 rounded-3xl border-2 border-dashed p-5 text-center transition ${done ? "border-emerald-400 bg-emerald-50" : "border-maroon-700/30 bg-white hover:border-maroon-700/60 hover:bg-cream/50"}`}>
+        <input type="file" accept="image/*" className="sr-only" disabled={pending} onChange={(e) => { pick(e.target.files?.[0]); e.target.value = ""; }} />
+        {preview ? (
+          <div className="relative">
+            <img src={preview} alt="Your payment screenshot" className={`max-h-56 rounded-2xl shadow ring-1 ring-ink/10 ${pending ? "opacity-50" : ""}`} />
+            {pending && <Loader2 className="absolute inset-0 m-auto h-8 w-8 animate-spin text-maroon-700" />}
+            {done && !pending && <span className="absolute -right-3 -top-3 grid h-9 w-9 place-items-center rounded-full bg-emerald-500 text-white shadow-lg ring-4 ring-white"><Check className="h-5 w-5" /></span>}
+          </div>
+        ) : (
+          <span className="grid h-16 w-16 place-items-center rounded-full bg-maroon-700 text-cream shadow-lg transition group-hover:scale-105">{pending ? <Loader2 className="h-7 w-7 animate-spin" /> : <ImageUp className="h-7 w-7" />}</span>
+        )}
+        {done && !pending ? (
+          <span>
+            <span className="block font-display text-lg font-bold text-emerald-800">Screenshot received ✓</span>
+            <span className="mt-0.5 flex items-center justify-center gap-1 text-xs text-emerald-900/70"><RefreshCw className="h-3 w-3" /> Wrong photo? Tap to choose another</span>
+          </span>
+        ) : (
+          <span>
+            <span className="block font-display text-lg font-bold text-maroon-700">{pending ? "Uploading…" : "Upload payment screenshot"}</span>
+            <span className="mt-0.5 flex items-center justify-center gap-1 text-xs text-ink/60"><Camera className="h-3.5 w-3.5" /> Tap to choose the &quot;Payment successful&quot; screenshot from your gallery</span>
+          </span>
+        )}
+      </label>
+      {err && <p className="mt-2 rounded-xl bg-chilli/10 p-2 text-center text-sm text-chilli">{err}</p>}
     </div>
   );
 }

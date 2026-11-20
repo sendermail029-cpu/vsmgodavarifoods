@@ -62,3 +62,25 @@ export async function destroyImage(url: string | null | undefined) {
     return false;
   }
 }
+
+/** Server-side upload of a data-URL image into a sub-folder of ours (e.g. customers' payment screenshots). Returns the https URL or null. */
+export async function uploadImage(dataUrl: string, subfolder: string) {
+  const cfg = cloudinaryConfig();
+  if (!cfg) return null;
+  try {
+    const folder = `${FOLDER}/${subfolder}`;
+    const timestamp = Math.floor(Date.now() / 1000);
+    const signature = createHash("sha1").update(`folder=${folder}&timestamp=${timestamp}${cfg.apiSecret}`).digest("hex");
+    const fd = new FormData();
+    fd.append("file", dataUrl);
+    fd.append("folder", folder);
+    fd.append("api_key", cfg.apiKey);
+    fd.append("timestamp", String(timestamp));
+    fd.append("signature", signature);
+    const r = await fetch(`https://api.cloudinary.com/v1_1/${cfg.cloudName}/image/upload`, { method: "POST", body: fd });
+    const j = (await r.json()) as { secure_url?: string };
+    return j.secure_url ?? null;
+  } catch {
+    return null;
+  }
+}

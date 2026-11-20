@@ -36,7 +36,7 @@ export type CheckoutInput = z.infer<typeof checkoutSchema>;
 export type OrderItem = { variantId: number; productId: number; name: string; label: string; price: number; qty: number; grams: number };
 export type Order = {
   id: number; code: string; access_token: string; customer_name: string; phone: string; email: string | null;
-  address: string; city: string; state: string; pincode: string; country: string; notes: string | null; items: OrderItem[];
+  address: string; city: string; state: string; pincode: string; country: string; notes: string | null; items: OrderItem[]; payment_proof: string | null;
   subtotal: number; shipping: number; total: number; payment_method: "upi_qr" | "phonepe" | "cod";
   payment_status: "pending" | "submitted" | "paid" | "failed" | "refunded" | "expired"; utr: string | null; provider_txn: string | null;
   status: "placed" | "confirmed" | "packed" | "shipped" | "delivered" | "cancelled"; tracking: string | null;
@@ -232,7 +232,7 @@ export async function setPaymentStatus(code: string, status: Order["payment_stat
 }
 
 /* ---------------- unpaid-order expiry ---------------- */
-export const PAYMENT_WINDOW_HOURS = 2;
+export const PAYMENT_WINDOW_HOURS = 24;
 let lastExpiryRun = 0;
 
 /**

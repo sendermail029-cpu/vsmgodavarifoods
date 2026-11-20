@@ -4,13 +4,16 @@ import { getOrderById } from "@/lib/orders";
 import { rupees } from "@/lib/format";
 import { Badge, PageHeader } from "@/components/admin/ui";
 import { OrderControls } from "./OrderControls";
+import { CustomerMessages } from "./CustomerMessages";
+import { getSettings } from "@/lib/settings";
 
 const METHOD: Record<string, string> = { upi_qr: "UPI (scan & pay to your UPI ID)", phonepe: "PhonePe (automatic)", cod: "Cash on Delivery" };
 
 export default async function OrderDetail({ params }: { params: Promise<{ id: string }> }) {
   const o = await getOrderById(Number((await params).id));
   if (!o) notFound();
-  const wa = `https://wa.me/91${o.phone}?text=${encodeURIComponent(`Hello ${o.customer_name}, this is VSM Godavari Foods about your order ${o.code}.`)}`;
+  const s = await getSettings();
+  const wa = `https://wa.me/${o.phone.startsWith("+") ? o.phone.slice(1) : `91${o.phone}`}?text=${encodeURIComponent(`Hello ${o.customer_name}, this is VSM Godavari Foods about your order ${o.code}.`)}`;
   return (
     <div>
       <PageHeader title={`Order ${o.code}`} sub={new Date(o.created_at.replace(" ", "T") + "Z").toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })}>
@@ -40,7 +43,7 @@ export default async function OrderDetail({ params }: { params: Promise<{ id: st
             <div>
               <h2 className="font-display text-xl font-bold">Customer</h2>
               <p className="mt-2 font-semibold">{o.customer_name}</p>
-              <p className="text-sm"><a className="text-maroon-700" href={`tel:+91${o.phone}`}>+91 {o.phone}</a>{o.email && <> · <a className="text-maroon-700" href={`mailto:${o.email}`}>{o.email}</a></>}</p>
+              <p className="text-sm"><a className="text-maroon-700" href={`tel:${o.phone.startsWith("+") ? o.phone : `+91${o.phone}`}`}>{o.phone.startsWith("+") ? o.phone : `+91 ${o.phone}`}</a>{o.email && <> · <a className="text-maroon-700" href={`mailto:${o.email}`}>{o.email}</a></>}</p>
               <a href={wa} target="_blank" rel="noopener noreferrer" className="btn-gold mt-3">WhatsApp customer</a>
             </div>
             <div>
@@ -57,10 +60,20 @@ export default async function OrderDetail({ params }: { params: Promise<{ id: st
             <p>Status: <Badge v={o.payment_status} /></p>
             {o.utr && <p>Customer UTR: <b className="font-mono text-base">{o.utr}</b></p>}
             {o.provider_txn && <p>Transaction ID: <span className="font-mono">{o.provider_txn}</span></p>}
+            {o.payment_proof && (
+              <div>
+                <p className="font-semibold">Customer&apos;s payment screenshot</p>
+                <a href={o.payment_proof} target="_blank" rel="noopener noreferrer" title="Open full size">
+                  <img src={o.payment_proof} alt="Payment screenshot sent by the customer" className="mt-2 max-h-80 w-full rounded-xl object-contain ring-1 ring-maroon-700/15 transition hover:ring-maroon-700/50" />
+                </a>
+                <p className="mt-1 text-[11px] text-ink/50">Tap to open full size. A screenshot can be faked — always check the money in your bank app before marking Paid.</p>
+              </div>
+            )}
             {o.payment_method === "upi_qr" && o.payment_status !== "paid" && (
               <p className="rounded-xl bg-cream p-3 text-xs text-ink/70">Open your bank / UPI business app and check that <b>{rupees(o.total)}</b> was received{o.utr ? <> with reference <b>{o.utr}</b></> : ""} (note: <b>Order {o.code}</b>). Only then mark as <b>Paid</b>. If they paid to the mobile number without a note, match by the <b>amount</b> and the <b>payer&apos;s name</b> ({o.customer_name}).</p>
             )}
           </section>
+          <CustomerMessages o={o} shop={s.store_name || "VSM Godavari Foods"} />
           <OrderControls cod={o.payment_method === "cod"} id={o.id} status={o.status} payment={o.payment_status} tracking={o.tracking ?? ""} />
         </aside>
       </div>

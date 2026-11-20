@@ -184,6 +184,9 @@ const SCHEMA: string[] = [
   `CREATE INDEX IF NOT EXISTS idx_orders_created ON orders(created_at)`,
 ];
 
+/** Bump when adding a migration below, so a running dev server re-runs setup. */
+const DB_VERSION = SCHEMA.length * 100 + 3;
+
 async function init(client: Client) {
   await client.execute("PRAGMA foreign_keys = ON");
   await client.batch(SCHEMA, "write");
@@ -191,6 +194,8 @@ async function init(client: Client) {
   const cols = (await client.execute("PRAGMA table_info(orders)")).rows.map((r) => String(r.name));
   if (!cols.includes("alert_at")) await client.execute("ALTER TABLE orders ADD COLUMN alert_at TEXT");
   if (!cols.includes("country")) await client.execute("ALTER TABLE orders ADD COLUMN country TEXT NOT NULL DEFAULT 'India'");
+  // customer's payment screenshot (Cloudinary link, or a small data URL if Cloudinary isn't set up)
+  if (!cols.includes("payment_proof")) await client.execute("ALTER TABLE orders ADD COLUMN payment_proof TEXT");
 
   // default settings (only inserts missing keys)
   await client.batch(
@@ -240,7 +245,7 @@ async function init(client: Client) {
 export async function db(): Promise<Client> {
   if (!globalForDb.__vsmDb) globalForDb.__vsmDb = makeClient();
   // re-run setup when new tables were added while the server is running (dev hot reload)
-  if (globalForDb.__vsmDbSchema !== SCHEMA.length) { globalForDb.__vsmDbReady = undefined; globalForDb.__vsmDbSchema = SCHEMA.length; }
+  if (globalForDb.__vsmDbSchema !== DB_VERSION) { globalForDb.__vsmDbReady = undefined; globalForDb.__vsmDbSchema = DB_VERSION; }
   if (!globalForDb.__vsmDbReady) {
     globalForDb.__vsmDbReady = init(globalForDb.__vsmDb).catch((e) => {
       globalForDb.__vsmDbReady = undefined;
