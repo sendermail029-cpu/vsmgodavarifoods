@@ -5,7 +5,8 @@ export const rupees = (paise: number) =>
 export const slugify = (s: string) =>
   s.toLowerCase().normalize("NFKD").replace(/[^\w\s-]/g, "").trim().replace(/[\s_-]+/g, "-").replace(/^-+|-+$/g, "");
 
-export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000").replace(/\/$/, "");
+/** Public website address — used in customer links (WhatsApp messages, order links), SEO and the sticker logo. */
+export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.vsmgodavarifoods.com").replace(/\/$/, "");
 
 /** packGrams = weight of the jar + box added per item (couriers charge on the packed weight). */
 export type ShippingRules = { freeAbove: number; perKg: number; min: number; packGrams?: number };
