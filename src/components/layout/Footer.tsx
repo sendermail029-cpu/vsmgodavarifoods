@@ -121,7 +121,7 @@ export function Footer({ categories, phone, phone2, mapsUrl, facebookUrl, email,
           <p>© {new Date().getFullYear()} VSM Godavari Foods. All rights reserved.</p>
           {/* developer credit (middle of the bar) */}
           <a href="https://www.pandjtechnologies.com/" target="_blank" rel="noopener" className="group inline-flex items-center gap-1.5">
-            <img src="/brand/pandj-logo.webp" alt="" width={20} height={20} loading="lazy" decoding="async" className="h-5 w-5 object-contain" />
+            <img src="/brand/pandj-logo.webp" alt="" width={22} height={22} loading="lazy" decoding="async" className="h-[22px] w-[22px] object-contain" />
             <span>Designed by <b className="font-semibold text-cream/90 transition group-hover:text-gold-light">P &amp; J Technologies</b></span>
           </a>
           <p className="lg:pr-20">Secure UPI payments · Hygienically packed · All-India delivery</p>
