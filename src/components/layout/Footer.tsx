@@ -120,11 +120,9 @@ export function Footer({ categories, phone, phone2, mapsUrl, facebookUrl, email,
         <div className="container-x flex flex-col items-center justify-between gap-3 py-5 text-center text-xs text-cream/60 lg:flex-row lg:text-left">
           <p>© {new Date().getFullYear()} VSM Godavari Foods. All rights reserved.</p>
           {/* developer credit (middle of the bar) */}
-          <a href="https://www.pandjtechnologies.com/" target="_blank" rel="noopener" className="group inline-flex items-center gap-2 rounded-full py-1 pl-1 pr-3 ring-1 ring-cream/15 transition hover:bg-white/5 hover:ring-gold-light/50">
-            <span className="grid h-7 w-7 place-items-center rounded-full bg-white p-0.5 shadow-sm">
-              <img src="/brand/pandj-logo.webp" alt="" width={24} height={24} loading="lazy" decoding="async" className="h-6 w-6 object-contain" />
-            </span>
-            <span>Designed &amp; developed by <b className="font-semibold text-cream/90 transition group-hover:text-gold-light">P &amp; J Technologies</b></span>
+          <a href="https://www.pandjtechnologies.com/" target="_blank" rel="noopener" className="group inline-flex items-center gap-1.5">
+            <img src="/brand/pandj-logo.webp" alt="" width={20} height={20} loading="lazy" decoding="async" className="h-5 w-5 object-contain" />
+            <span>Designed by <b className="font-semibold text-cream/90 transition group-hover:text-gold-light">P &amp; J Technologies</b></span>
           </a>
           <p className="lg:pr-20">Secure UPI payments · Hygienically packed · All-India delivery</p>
         </div>
